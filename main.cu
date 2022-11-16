@@ -4,23 +4,33 @@
 
 using namespace pll;
 
-class InPlaceTestOp : public Operator<long, long, array<unsigned int, 3>&> {
+class IndexTestOp : public Operator<long, long, array<unsigned int, 3>&> {
 public:
     PLL_USERFUNC long operator()(long x, array<unsigned int, 3> &coords) override {
         return coords[0] + 10 * coords[1] + 100 * coords[2];
     }
 };
 
+class MoveRightOp : public Operator<long, const PLS<long, 3>&, array<int, 3>> {
+public:
+    PLL_USERFUNC long operator()(const PLS<long, 3> &pls, array<int, 3> coords) override {
+        return pls({coords[0] - 1, coords[1], coords[2]});
+    }
+};
+
 int main() {
     Paralleli::init();
 
-    MDS<long, 3> mds({3, 3, 3});
+    IndexTestOp op;
+    MoveRightOp stencilTestOp;
 
-    InPlaceTestOp op;
+    MDS<long, 3> mds({3, 3, 3});
+    MDS<long, 3> mds2({3, 3, 3});
 
     mds.mapWithIndex(op, mds);
-
+    mds.mapStencil(stencilTestOp, mds2, 1, 0);
     mds.print();
+    mds2.print();
 
     return 0;
 }

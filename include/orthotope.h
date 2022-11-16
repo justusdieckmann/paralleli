@@ -63,9 +63,8 @@ namespace pll {
             return max[dim];
         }
 
-    private:
-        array<T, N> min;
-        array<T, N> max;
+        const array<T, N> min;
+        const array<T, N> max;
     };
 
 }

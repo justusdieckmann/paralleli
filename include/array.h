@@ -7,6 +7,10 @@ namespace pll {
     struct array {
         T data[N];
 
+        PLL_USERFUNC T operator[](size_t n) const {
+            return data[n];
+        }
+
         PLL_USERFUNC T& operator[](size_t n) {
             return data[n];
         }
