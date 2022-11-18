@@ -34,24 +34,24 @@ namespace pll::kernel {
     }
 
     template <typename R, typename T, unsigned int N, typename F, typename = std::enable_if_t<std::is_base_of_v<Operator<R, T, array<unsigned int, N>&>, F>>>
-    __global__ void mapIndex(size_t elements, R* out, T* in, F op, array<unsigned int, N> globalSize) {
+    __global__ void mapIndex(size_t start, size_t elements, R* out, T* in, F op, array<unsigned int, N> globalSize) {
         size_t i = threadIdx.x + blockIdx.x * blockDim.x;
         if (i >= elements) {
             return;
         }
         array<unsigned int, N> coordinates;
-        indexToCoordinate<N>(i, globalSize, coordinates);
+        indexToCoordinate<N>(i + start, globalSize, coordinates);
         out[i] = op(in[i], coordinates);
     }
 
     template <typename R, typename T, unsigned int N, typename F, typename = std::enable_if_t<std::is_base_of_v<Operator<R, const PLS<T, N>&, array<int, N>>, F>>>
-    __global__ void mapStencil(size_t elements, R* out, F op, array<unsigned int, N> globalSize, PLS<T, N> pls) {
+    __global__ void mapStencil(size_t start, size_t elements, R* out, F op, array<unsigned int, N> globalSize, PLS<T, N> pls) {
         size_t i = threadIdx.x + blockIdx.x * blockDim.x;
         if (i >= elements) {
             return;
         }
         array<int, N> coordinates;
-        indexToCoordinate<N>(i, globalSize, coordinates);
+        indexToCoordinate<N>(i + start, globalSize, coordinates);
         out[i] = op(pls, coordinates);
     }
 

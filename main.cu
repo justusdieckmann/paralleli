@@ -4,6 +4,13 @@
 
 using namespace pll;
 
+class MapTestOp : public Operator<long, long> {
+public:
+    PLL_USERFUNC long operator()(long x) override {
+        return 5;
+    }
+};
+
 class IndexTestOp : public Operator<long, long, array<unsigned int, 3>&> {
 public:
     PLL_USERFUNC long operator()(long x, array<unsigned int, 3> &coords) override {
@@ -23,13 +30,14 @@ int main() {
 
     IndexTestOp op;
     MoveRightOp stencilTestOp;
+    MapTestOp mapTestOp;
 
     MDS<long, 3> mds({3, 3, 3});
     MDS<long, 3> mds2({3, 3, 3});
 
     mds.mapWithIndex(op, mds);
-    mds.mapStencil(stencilTestOp, mds2, 1, 0);
     mds.print();
+    mds.mapStencil(stencilTestOp, mds2, 1, 0);
     mds2.print();
 
     return 0;

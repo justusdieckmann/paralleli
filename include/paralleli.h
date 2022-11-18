@@ -10,6 +10,17 @@
 #include <vector>
 #include "cuda.h"
 
+#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char* file, int line, bool abort = false)
+{
+    if (code != cudaSuccess)
+    {
+        fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+        if (abort) exit(code);
+    }
+}
+
+
 namespace pll {
 
     namespace Paralleli {
@@ -18,7 +29,7 @@ namespace pll {
         static cudaStream_t *streams;
 
         static void init() {
-            nGPUs = 1;
+            nGPUs = 2;
             threadsPerBlock = 512;
             streams = static_cast<cudaStream_t *>(malloc(sizeof(cudaStream_t) * nGPUs));
             for (int i = 0; i < nGPUs; i++) {

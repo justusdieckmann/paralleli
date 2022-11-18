@@ -26,12 +26,13 @@ namespace pll {
     public:
         GPUMemorySection() = default;
 
-        GPUMemorySection(size_t minLayer, size_t maxLayer, size_t layerSize, size_t device, T* hostData)
+        GPUMemorySection(size_t minLayer, size_t maxLayer, size_t layerSize, int device, T* hostData)
                 : minLayer(minLayer),
                   maxLayer(maxLayer),
                   layerSize(layerSize),
                   device(device),
                   hostData(hostData){
+            cudaSetDevice(device);
             cudaMalloc(&data, getBytes());
         }
 
@@ -43,10 +44,14 @@ namespace pll {
             return getSize() * sizeof(T);
         }
 
+        inline size_t getFirstElement() {
+            return minLayer * layerSize;
+        }
+
         size_t minLayer;
         size_t maxLayer;
         size_t layerSize;
-        size_t device;
+        int device;
         bool isAhead = false;
         bool isBehind = false;
         T* data;

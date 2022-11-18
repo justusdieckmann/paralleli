@@ -82,7 +82,7 @@ namespace pll {
             }
         }
 
-        PLL_USERFUNC inline int coordinateToIndex(array<int, 3> coords) const {
+        PLL_USERFUNC inline int coordinateToIndex(array<int, N> coords) const {
             return coordinateToIndex<0>(coords);
         }
 

@@ -56,6 +56,20 @@ namespace pll {
             return N;
         }
 
+        inline int coordinateToIndex(array<unsigned int, N> coords) const {
+            return coordinateHelper<0>(coords);
+        }
+
+        template <unsigned int M>
+        inline int coordinateHelper(const array<unsigned int, N> &coords) const {
+            return coordinateHelper<M + 1>(coords) * globalSize[M] + coords[M];
+        }
+
+        template <>
+        inline int coordinateHelper<N - 1>(const array<unsigned int, N> &coords) const {
+            return coords[N - 1];
+        }
+
         void fill(T element) {
             for (size_t i = 0; i < localSection.size(); i++) {
                 localPartition[i] = element;
@@ -71,10 +85,12 @@ namespace pll {
                 cudaSetDevice(memoryRegion.device);
                 size_t threadsPerBlock = Paralleli::threadsPerBlock;
                 size_t numBlocks = (memoryRegion.getSize() + threadsPerBlock - 1) / threadsPerBlock;
-                kernel::map<<<numBlocks, threadsPerBlock, 0, Paralleli::streams[i]>>>(
-                        localSection.size(), result.deviceMemoryRegions[i].data, memoryRegion.data, op
+                kernel::map<<<numBlocks, threadsPerBlock>>>(
+                        memoryRegion.getSize(), result.deviceMemoryRegions[i].data, memoryRegion.data, op
                 );
-                memoryRegion.isAhead = true;
+                result.deviceMemoryRegions[i].isAhead = true;
+                gpuErrchk(cudaDeviceSynchronize());
+                gpuErrchk(cudaGetLastError());
             }
             Paralleli::syncStreams();
         }
@@ -87,11 +103,14 @@ namespace pll {
                 cudaSetDevice(memoryRegion.device);
                 size_t threadsPerBlock = Paralleli::threadsPerBlock;
                 size_t numBlocks = (memoryRegion.getSize() + threadsPerBlock - 1) / threadsPerBlock;
-                kernel::mapIndex<T, T, N, F><<<numBlocks, threadsPerBlock, 0, Paralleli::streams[i]>>>(
-                        localSection.size(), result.deviceMemoryRegions[i].data, memoryRegion.data, op, globalSize
+                kernel::mapIndex<T, T, N, F><<<numBlocks, threadsPerBlock>>>(
+                        memoryRegion.getFirstElement(), memoryRegion.getSize(), result.deviceMemoryRegions[i].data, memoryRegion.data, op, globalSize
                 );
-                memoryRegion.isAhead = true;
+                result.deviceMemoryRegions[i].isAhead = true;
+                gpuErrchk(cudaDeviceSynchronize());
+                gpuErrchk(cudaGetLastError());
             }
+            Paralleli::syncStreams();
         }
 
         template <typename R, typename F, typename = std::enable_if_t<std::is_base_of_v<Operator<R, const PLS<T, N>&, array<int, N>>, F>>>
@@ -103,10 +122,12 @@ namespace pll {
                 cudaSetDevice(memoryRegion.device);
                 size_t threadsPerBlock = Paralleli::threadsPerBlock;
                 size_t numBlocks = (memoryRegion.getSize() + threadsPerBlock - 1) / threadsPerBlock;
-                kernel::mapStencil<R, T, N, F><<<numBlocks, threadsPerBlock, 0, Paralleli::streams[i]>>>(
-                        localSection.size(), result.deviceMemoryRegions[i].data, op, globalSize, pls[i]
+                kernel::mapStencil<R, T, N, F><<<numBlocks, threadsPerBlock>>>(
+                        memoryRegion.getFirstElement(), memoryRegion.getSize(), result.deviceMemoryRegions[i].data, op, globalSize, pls[i]
                 );
                 result.deviceMemoryRegions[i].isAhead = true;
+                gpuErrchk(cudaDeviceSynchronize());
+                gpuErrchk(cudaGetLastError());
             }
             Paralleli::syncStreams();
         }
@@ -207,7 +228,8 @@ namespace pll {
 
             int length = localSection.getDimensionLength(N - 1);
 
-            deviceMemoryRegions = std::vector<GPUMemorySection<T>>(Paralleli::nGPUs);
+            deviceMemoryRegions = std::vector<GPUMemorySection<T>>();
+            deviceMemoryRegions.reserve(Paralleli::nGPUs);
 
             layerSize = 1;
             for (int i = 0; i < N - 1; i++) {
@@ -224,7 +246,9 @@ namespace pll {
                 if (i < remaining) {
                     current++;
                 }
-                deviceMemoryRegions[i] = GPUMemorySection<T>(min, current - 1, layerSize, i, &localPartition[min]);
+                deviceMemoryRegions.push_back(
+                        GPUMemorySection<T>(min, current - 1, layerSize, i, &localPartition[min * layerSize])
+                );
             }
         }
 
